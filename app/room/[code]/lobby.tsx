@@ -1,7 +1,9 @@
+import { httpsCallable } from 'firebase/functions';
 import { update } from 'firebase/database';
 import { useLocalSearchParams } from 'expo-router';
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
 import {
+  Alert,
   FlatList,
   ScrollView,
   StyleSheet,
@@ -16,8 +18,10 @@ import { PlayerCard } from '@/src/components/lobby/PlayerCard';
 import { RoomCodeDisplay } from '@/src/components/lobby/RoomCodeDisplay';
 import { useChat } from '@/src/hooks/useChat';
 import { playerRef } from '@/src/services/firebase/rtdb';
+import { functions } from '@/src/services/firebase/config';
 import { useProfileStore } from '@/src/store/profileStore';
 import { useRoomStore, selectPlayerList, selectIsHost } from '@/src/store/roomStore';
+import { MIN_PLAYERS } from '@/src/services/game/constants';
 
 export default function LobbyScreen() {
   const { code } = useLocalSearchParams<{ code: string }>();
@@ -27,13 +31,26 @@ export default function LobbyScreen() {
   const isHost = useRoomStore(selectIsHost(uid));
   const { messages, sendMessage } = useChat(code);
   const scrollRef = useRef<ScrollView>(null);
+  const [starting, setStarting] = useState(false);
 
   const myPlayer = uid ? players[uid] : null;
+  const canStart = playerList.length >= MIN_PLAYERS;
 
   async function handleReadyToggle() {
     if (!uid) return;
     const pRef = playerRef(code, uid);
     await update(pRef, { isReady: !myPlayer?.isReady });
+  }
+
+  async function handleStartGame() {
+    setStarting(true);
+    try {
+      await httpsCallable(functions, 'startGame')({ code });
+    } catch (e: any) {
+      Alert.alert('Hata', e?.message ?? 'Oyun başlatılamadı.');
+    } finally {
+      setStarting(false);
+    }
   }
 
   return (
@@ -63,14 +80,15 @@ export default function LobbyScreen() {
           <View style={styles.startSection}>
             <Button
               label="Oyunu Başlat"
-              disabled
-              onPress={() => {}}
+              disabled={!canStart || starting}
+              loading={starting}
+              onPress={handleStartGame}
             />
-            <Text style={styles.startHint}>
-              {playerList.length < 3
-                ? `En az 3 oyuncu gerekli (şu an: ${playerList.length})`
-                : 'Oyun başlatma Faz 2\'de aktif olacak.'}
-            </Text>
+            {!canStart && (
+              <Text style={styles.startHint}>
+                En az {MIN_PLAYERS} oyuncu gerekli (şu an: {playerList.length})
+              </Text>
+            )}
           </View>
         )}
       </View>

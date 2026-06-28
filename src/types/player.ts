@@ -9,4 +9,5 @@ export interface Player {
   lastSeen: number;
   totalScore: number;
   joinedAt: number;
+  photosReady?: boolean;
 }

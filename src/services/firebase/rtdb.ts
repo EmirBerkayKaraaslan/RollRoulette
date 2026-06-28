@@ -16,6 +16,13 @@ export const playersRef = (code: string) => ref(db, `rooms/${code}/players`);
 export const playerRef = (code: string, uid: string) => ref(db, `rooms/${code}/players/${uid}`);
 export const chatRef = (code: string) => ref(db, `rooms/${code}/chat`);
 
+// Game refs
+export const photoPoolRef = (code: string) => ref(db, `rooms/${code}/game/photoPool`);
+export const photoPoolPlayerRef = (code: string, uid: string) =>
+  ref(db, `rooms/${code}/game/photoPool/${uid}`);
+export const roundRef = (code: string, n: number) => ref(db, `rooms/${code}/game/rounds/${n}`);
+export const serverTimeOffsetRef = () => ref(db, '.info/serverTimeOffset');
+
 export function subscribeValue<T>(
   path: ReturnType<typeof ref>,
   cb: (val: T | null) => void,
