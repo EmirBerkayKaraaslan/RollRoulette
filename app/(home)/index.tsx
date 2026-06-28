@@ -5,7 +5,9 @@ import { useState } from 'react';
 import { Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Avatar } from '@/src/components/ui/Avatar';
 import { Button } from '@/src/components/ui/Button';
+import { OfflineBanner } from '@/src/components/ui/OfflineBanner';
 import { Screen } from '@/src/components/ui/Screen';
+import { SettingsModal } from '@/src/components/ui/SettingsModal';
 import { useProfileStore } from '@/src/store/profileStore';
 import { useRoomStore } from '@/src/store/roomStore';
 import type { GameMode } from '@/src/types/room';
@@ -18,6 +20,7 @@ export default function HomeScreen() {
 
   const [creating, setCreating] = useState(false);
   const [selectedMode, setSelectedMode] = useState<GameMode>('blind');
+  const [settingsVisible, setSettingsVisible] = useState(false);
 
   async function handleCreateRoom() {
     if (!uid) return;
@@ -37,6 +40,8 @@ export default function HomeScreen() {
 
   return (
     <Screen style={styles.screen}>
+      <OfflineBanner />
+      <SettingsModal visible={settingsVisible} onClose={() => setSettingsVisible(false)} />
       <View style={styles.header}>
         <TouchableOpacity style={styles.profileRow} onPress={() => router.push('/(setup)')}>
           <Avatar uri={photoUrl} initials={nickname} size={44} />
@@ -44,6 +49,9 @@ export default function HomeScreen() {
             <Text style={styles.nicknameLabel}>{nickname}</Text>
             <Text style={styles.editHint}>Düzenle</Text>
           </View>
+        </TouchableOpacity>
+        <TouchableOpacity onPress={() => setSettingsVisible(true)} style={styles.settingsBtn}>
+          <Text style={styles.settingsIcon}>⚙</Text>
         </TouchableOpacity>
       </View>
 
@@ -98,11 +106,22 @@ const styles = StyleSheet.create({
   },
   header: {
     paddingTop: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
   profileRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
+    flex: 1,
+  },
+  settingsBtn: {
+    padding: 8,
+  },
+  settingsIcon: {
+    fontSize: 22,
+    color: '#8E8E93',
   },
   nicknameLabel: {
     fontSize: 16,

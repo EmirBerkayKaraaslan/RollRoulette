@@ -1,14 +1,18 @@
 import { router } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Avatar } from '@/src/components/ui/Avatar';
 import { Button } from '@/src/components/ui/Button';
+import { EulaModal } from '@/src/components/ui/EulaModal';
 import { Screen } from '@/src/components/ui/Screen';
 import { TextField } from '@/src/components/ui/TextField';
 import { pickAvatar } from '@/src/services/photo/picker';
 import { processAndUploadAvatar } from '@/src/services/photo/uploader';
 import { upsertUserProfile } from '@/src/services/firebase/firestore';
 import { useProfileStore } from '@/src/store/profileStore';
+
+const EULA_KEY = 'rr-eula-v1';
 
 export default function SetupScreen() {
   const uid = useProfileStore((s) => s.uid);
@@ -18,6 +22,18 @@ export default function SetupScreen() {
   const [photoUri, setPhotoUri] = useState<string | null>(null);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [eulaVisible, setEulaVisible] = useState(false);
+
+  useEffect(() => {
+    AsyncStorage.getItem(EULA_KEY).then((val) => {
+      if (val !== 'accepted') setEulaVisible(true);
+    });
+  }, []);
+
+  async function handleEulaAccept() {
+    await AsyncStorage.setItem(EULA_KEY, 'accepted');
+    setEulaVisible(false);
+  }
 
   async function handlePickAvatar() {
     const uri = await pickAvatar();
@@ -60,6 +76,7 @@ export default function SetupScreen() {
 
   return (
     <Screen scroll style={styles.screen}>
+      <EulaModal visible={eulaVisible} onAccept={handleEulaAccept} />
       <Text style={styles.title}>Profilini Kur</Text>
       <Text style={styles.subtitle}>Arkadaşların seni bu isimle görecek.</Text>
 

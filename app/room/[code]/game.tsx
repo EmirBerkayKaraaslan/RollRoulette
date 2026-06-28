@@ -1,10 +1,12 @@
 import { httpsCallable } from 'firebase/functions';
 import { useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { CountdownTimer } from '@/src/components/ui/CountdownTimer';
+import { OfflineBanner } from '@/src/components/ui/OfflineBanner';
 import { PhotoCard } from '@/src/components/game/PhotoCard';
 import { GuessButton } from '@/src/components/game/GuessButton';
+import { ReportModal } from '@/src/components/ui/ReportModal';
 import { RevealOverlay } from '@/src/components/game/RevealOverlay';
 import { ScorePopup } from '@/src/components/game/ScorePopup';
 import { Screen } from '@/src/components/ui/Screen';
@@ -31,6 +33,7 @@ export default function GameScreen() {
 
   const [submitting, setSubmitting] = useState(false);
   const [showPopup, setShowPopup] = useState(false);
+  const [reportVisible, setReportVisible] = useState(false);
   const revealTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useGameRound(code);
@@ -132,15 +135,32 @@ export default function GameScreen() {
 
   return (
     <Screen style={styles.screen}>
+      <OfflineBanner />
+      {currentRound && currentRound.photoOwnerId !== uid && (
+        <ReportModal
+          visible={reportVisible}
+          onClose={() => setReportVisible(false)}
+          roomCode={code}
+          photoUrl={currentRound.photoUrl}
+          photoOwnerId={currentRound.photoOwnerId}
+        />
+      )}
       <View style={styles.header}>
         <Text style={styles.roundLabel}>
           Tur {roundNumber}/{meta?.totalRounds ?? '?'}
         </Text>
-        {isSpectator && (
-          <View style={styles.spectatorBadge}>
-            <Text style={styles.spectatorText}>İzliyorsun</Text>
-          </View>
-        )}
+        <View style={styles.headerRight}>
+          {isSpectator && (
+            <View style={styles.spectatorBadge}>
+              <Text style={styles.spectatorText}>İzliyorsun</Text>
+            </View>
+          )}
+          {!isPhotoOwner && (
+            <TouchableOpacity onPress={() => setReportVisible(true)} style={styles.reportBtn}>
+              <Text style={styles.reportBtnText}>⚠</Text>
+            </TouchableOpacity>
+          )}
+        </View>
       </View>
 
       <CountdownTimer
@@ -207,6 +227,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
   },
+  headerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
   roundLabel: {
     fontSize: 13,
     fontWeight: '600',
@@ -224,6 +249,13 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
     color: '#8E8E93',
+  },
+  reportBtn: {
+    padding: 4,
+  },
+  reportBtnText: {
+    fontSize: 18,
+    color: '#FF9500',
   },
   photoWrapper: {
     paddingHorizontal: 20,

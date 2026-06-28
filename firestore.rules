@@ -4,5 +4,9 @@ service cloud.firestore {
     match /users/{uid} {
       allow read, write: if request.auth != null && request.auth.uid == uid;
     }
+    // Reports: yalnız CF admin SDK yazabilir/okuyabilir; istemci erişimi kapalı
+    match /reports/{reportId} {
+      allow read, write: if false;
+    }
   }
 }

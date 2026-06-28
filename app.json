@@ -1,14 +1,29 @@
 {
   "expo": {
     "name": "RollRoulette",
-    "slug": "RollRoulette",
+    "slug": "rollroulette",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "rollroulette",
-    "userInterfaceStyle": "automatic",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": false,
+      "bundleIdentifier": "com.rollroulette.app",
+      "buildNumber": "1",
+      "privacyManifests": {
+        "NSPrivacyAccessedAPITypes": [
+          {
+            "NSPrivacyAccessedAPIType": "NSPrivacyAccessedAPICategoryUserDefaults",
+            "NSPrivacyAccessedAPITypeReasons": ["CA92.1"]
+          },
+          {
+            "NSPrivacyAccessedAPIType": "NSPrivacyAccessedAPICategoryFileTimestamp",
+            "NSPrivacyAccessedAPITypeReasons": ["C617.1"]
+          }
+        ]
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -31,7 +46,22 @@
         {
           "image": "./assets/images/splash-icon.png",
           "resizeMode": "contain",
-          "backgroundColor": "#ffffff"
+          "backgroundColor": "#007AFF"
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Oyun havuzuna fotoğraf eklemek için galerine erişiyoruz. / We access your gallery to add photos to the game pool.",
+          "cameraPermission": false
+        }
+      ],
+      [
+        "expo-media-library",
+        {
+          "photosPermission": "Oyun havuzuna fotoğraf eklemek için galerine erişiyoruz. / We access your gallery to add photos to the game pool.",
+          "savePhotosPermission": false,
+          "isAccessMediaLocationEnabled": false
         }
       ]
     ],

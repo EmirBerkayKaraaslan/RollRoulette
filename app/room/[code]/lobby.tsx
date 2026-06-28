@@ -8,9 +8,11 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TouchableOpacity,
   View,
 } from 'react-native';
 import { Button } from '@/src/components/ui/Button';
+import { OfflineBanner } from '@/src/components/ui/OfflineBanner';
 import { Screen } from '@/src/components/ui/Screen';
 import { ChatBubble } from '@/src/components/lobby/ChatBubble';
 import { ChatInput } from '@/src/components/lobby/ChatInput';
@@ -32,9 +34,30 @@ export default function LobbyScreen() {
   const { messages, sendMessage } = useChat(code);
   const scrollRef = useRef<ScrollView>(null);
   const [starting, setStarting] = useState(false);
+  const [kicking, setKicking] = useState<string | null>(null);
 
   const myPlayer = uid ? players[uid] : null;
   const canStart = playerList.length >= MIN_PLAYERS;
+
+  async function handleKick(targetUid: string) {
+    Alert.alert('Oyuncuyu At', 'Bu oyuncuyu odadan atmak istediğine emin misin?', [
+      { text: 'İptal', style: 'cancel' },
+      {
+        text: 'At',
+        style: 'destructive',
+        onPress: async () => {
+          setKicking(targetUid);
+          try {
+            await httpsCallable(functions, 'kickPlayer')({ code, targetUid });
+          } catch (e: any) {
+            Alert.alert('Hata', e?.message ?? 'Oyuncu atılamadı.');
+          } finally {
+            setKicking(null);
+          }
+        },
+      },
+    ]);
+  }
 
   async function handleReadyToggle() {
     if (!uid) return;
@@ -55,6 +78,7 @@ export default function LobbyScreen() {
 
   return (
     <Screen style={styles.screen}>
+      <OfflineBanner />
       <View style={styles.top}>
         <RoomCodeDisplay code={code} />
 
@@ -65,7 +89,24 @@ export default function LobbyScreen() {
         <FlatList
           data={playerList}
           keyExtractor={(p) => p.uid}
-          renderItem={({ item }) => <PlayerCard player={item} />}
+          renderItem={({ item }) => (
+            <View style={styles.playerRow}>
+              <View style={styles.playerCardWrap}>
+                <PlayerCard player={item} />
+              </View>
+              {isHost && item.uid !== uid && (
+                <TouchableOpacity
+                  style={styles.kickBtn}
+                  onPress={() => handleKick(item.uid)}
+                  disabled={kicking === item.uid}
+                >
+                  <Text style={styles.kickText}>
+                    {kicking === item.uid ? '...' : 'At'}
+                  </Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          )}
           contentContainerStyle={styles.playerList}
           scrollEnabled={false}
         />
@@ -128,6 +169,25 @@ const styles = StyleSheet.create({
   },
   playerList: {
     gap: 8,
+  },
+  playerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  playerCardWrap: {
+    flex: 1,
+  },
+  kickBtn: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    backgroundColor: '#FF3B30',
+    borderRadius: 8,
+  },
+  kickText: {
+    color: '#fff',
+    fontSize: 13,
+    fontWeight: '600',
   },
   startSection: {
     gap: 6,
