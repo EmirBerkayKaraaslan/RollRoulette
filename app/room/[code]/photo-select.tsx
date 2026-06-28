@@ -11,6 +11,7 @@ import { playerRef } from '@/src/services/firebase/rtdb';
 import { functions } from '@/src/services/firebase/config';
 import { useProfileStore } from '@/src/store/profileStore';
 import { useRoomStore, selectPlayerList, selectIsHost } from '@/src/store/roomStore';
+import { useShallow } from 'zustand/react/shallow';
 import { useGameStore } from '@/src/store/gameStore';
 import { useHostMigration } from '@/src/hooks/useHostMigration';
 import { PHOTOS_PER_PLAYER, AFK_GRACE_MS } from '@/src/services/game/constants';
@@ -20,7 +21,7 @@ export default function PhotoSelectScreen() {
   const { code } = useLocalSearchParams<{ code: string }>();
   const uid = useProfileStore((s) => s.uid);
   const players = useRoomStore((s) => s.players);
-  const playerList = useRoomStore(selectPlayerList);
+  const playerList = useRoomStore(useShallow(selectPlayerList));
   const isHost = useRoomStore(selectIsHost(uid));
   const mode: GameMode = useRoomStore((s) => s.meta?.mode ?? 'blind');
   const setPoolUploadProgress = useGameStore((s) => s.setPoolUploadProgress);

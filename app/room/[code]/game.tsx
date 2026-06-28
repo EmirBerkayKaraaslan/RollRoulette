@@ -13,6 +13,7 @@ import { Screen } from '@/src/components/ui/Screen';
 import { functions } from '@/src/services/firebase/config';
 import { useProfileStore } from '@/src/store/profileStore';
 import { useRoomStore, selectPlayerList, selectIsHost } from '@/src/store/roomStore';
+import { useShallow } from 'zustand/react/shallow';
 import { useGameStore } from '@/src/store/gameStore';
 import { useGameRound } from '@/src/hooks/useGameRound';
 import { useHostMigration } from '@/src/hooks/useHostMigration';
@@ -23,7 +24,7 @@ export default function GameScreen() {
   const uid = useProfileStore((s) => s.uid);
   const meta = useRoomStore((s) => s.meta);
   const players = useRoomStore((s) => s.players);
-  const playerList = useRoomStore(selectPlayerList);
+  const playerList = useRoomStore(useShallow(selectPlayerList));
   const isHost = useRoomStore(selectIsHost(uid));
 
   const currentRound = useGameStore((s) => s.currentRound);

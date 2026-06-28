@@ -23,13 +23,14 @@ import { playerRef } from '@/src/services/firebase/rtdb';
 import { functions } from '@/src/services/firebase/config';
 import { useProfileStore } from '@/src/store/profileStore';
 import { useRoomStore, selectPlayerList, selectIsHost } from '@/src/store/roomStore';
+import { useShallow } from 'zustand/react/shallow';
 import { MIN_PLAYERS } from '@/src/services/game/constants';
 
 export default function LobbyScreen() {
   const { code } = useLocalSearchParams<{ code: string }>();
   const uid = useProfileStore((s) => s.uid);
   const players = useRoomStore((s) => s.players);
-  const playerList = useRoomStore(selectPlayerList);
+  const playerList = useRoomStore(useShallow(selectPlayerList));
   const isHost = useRoomStore(selectIsHost(uid));
   const { messages, sendMessage } = useChat(code);
   const scrollRef = useRef<ScrollView>(null);

@@ -4,11 +4,12 @@ import { Leaderboard } from '@/src/components/game/Leaderboard';
 import { Button } from '@/src/components/ui/Button';
 import { Screen } from '@/src/components/ui/Screen';
 import { useRoomStore, selectPlayerList } from '@/src/store/roomStore';
+import { useShallow } from 'zustand/react/shallow';
 import { useGameStore } from '@/src/store/gameStore';
 
 export default function ResultsScreen() {
   const { code } = useLocalSearchParams<{ code: string }>();
-  const playerList = useRoomStore(selectPlayerList);
+  const playerList = useRoomStore(useShallow(selectPlayerList));
   const reset = useGameStore((s) => s.reset);
   const leave = useRoomStore((s) => s.leave);
 

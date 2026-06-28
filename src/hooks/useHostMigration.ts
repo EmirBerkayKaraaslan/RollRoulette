@@ -2,12 +2,13 @@ import { httpsCallable } from 'firebase/functions';
 import { useEffect, useRef } from 'react';
 import { functions } from '@/src/services/firebase/config';
 import { useRoomStore, selectPlayerList } from '@/src/store/roomStore';
+import { useShallow } from 'zustand/react/shallow';
 import { HOST_GRACE_MS } from '@/src/services/game/constants';
 
 export function useHostMigration(code: string, uid: string | null) {
   const meta = useRoomStore((s) => s.meta);
   const players = useRoomStore((s) => s.players);
-  const playerList = useRoomStore(selectPlayerList);
+  const playerList = useRoomStore(useShallow(selectPlayerList));
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
