@@ -158,4 +158,4 @@ score = max(0, 10.000 - (submittedAt - startedAt) / 1000)
 | 2 | Oyun Motoru: Blind Mod, Timer, Puanlama | ✅ TAMAMLANDI — B1/S1/L1/L3/L4 düzeltildi, app+functions tsc temiz |
 | 3 | Curated Mod (Grup Küratörlüğü) + Animasyonlar | ✅ TAMAMLANDI — ilk turda temiz, app+functions tsc temiz |
 | 4 | Dayanıklılık: Disconnect, AFK, Host migrasyon, Spectator | ✅ TAMAMLANDI — ilk turda temiz, app+functions tsc temiz (runtime kopma testi cihazda) |
-| 5 | Cilalama + App Store Deploy | Başlamadı |
+| 5 | Cilalama + App Store Deploy (iOS) + UGC uyumu | PRD hazır → `docs/prd/FAZ-5.md` |
