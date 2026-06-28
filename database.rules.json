@@ -17,7 +17,9 @@
             "isReady":     { ".validate": "newData.isBoolean()" },
             "isConnected": { ".validate": "newData.isBoolean()" },
             "lastSeen":    { ".validate": "newData.isNumber()" },
-            "photosReady": { ".validate": "newData.isBoolean()" }
+            "photosReady": { ".validate": "newData.isBoolean()" },
+            "isSpectator": { ".validate": "newData.val() === data.val()" },
+            "isAfk":       { ".validate": "newData.val() === data.val()" }
           }
         },
         "chat": {

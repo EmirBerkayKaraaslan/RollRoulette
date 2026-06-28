@@ -1,35 +1,69 @@
 import { httpsCallable } from 'firebase/functions';
 import { useLocalSearchParams } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Alert, FlatList, StyleSheet, Text, View } from 'react-native';
 import { Button } from '@/src/components/ui/Button';
 import { Screen } from '@/src/components/ui/Screen';
 import { CurationCard } from '@/src/components/game/CurationCard';
 import { useCuration } from '@/src/hooks/useCuration';
+import { useHostMigration } from '@/src/hooks/useHostMigration';
 import { functions } from '@/src/services/firebase/config';
 import { useProfileStore } from '@/src/store/profileStore';
 import { useRoomStore, selectPlayerList, selectIsHost } from '@/src/store/roomStore';
+import { AFK_GRACE_MS } from '@/src/services/game/constants';
 
 export default function CurationScreen() {
   const { code } = useLocalSearchParams<{ code: string }>();
   const uid = useProfileStore((s) => s.uid);
   const meta = useRoomStore((s) => s.meta);
+  const players = useRoomStore((s) => s.players);
   const playerList = useRoomStore(selectPlayerList);
   const isHost = useRoomStore(selectIsHost(uid));
 
-  const { photos, castVote, submitVotes, myVote, readyCount, myReady } = useCuration(
-    code,
-    uid,
-  );
+  const { photos, castVote, submitVotes, myVote, ready, myReady } = useCuration(code, uid);
 
   const [submittingVotes, setSubmittingVotes] = useState(false);
   const [finalizing, setFinalizing] = useState(false);
   const [starting, setStarting] = useState(false);
+  const [skipping, setSkipping] = useState(false);
   const [approvedSummary, setApprovedSummary] = useState<number | null>(null);
+  const [afkTimeElapsed, setAfkTimeElapsed] = useState(false);
+  const afkTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useHostMigration(code, uid);
+
+  const isSpectator = uid != null && players[uid]?.isSpectator === true;
 
   const curationDone = meta?.curationDone === true;
-  const totalPlayers = playerList.length;
-  const allReady = readyCount >= totalPlayers && totalPlayers > 0;
+
+  // N2 fix: gate counts only connected non-spectator players
+  const connectedActive = playerList.filter((p) => p.isConnected && !p.isSpectator);
+  const totalActive = connectedActive.length;
+  const activeReadyCount = connectedActive.filter((p) => ready[p.uid]).length;
+  const allReady = totalActive > 0 && activeReadyCount >= totalActive;
+
+  // AFK timer: starts when host has voted but gate is still stuck
+  const gateStuck = isHost && myReady && !allReady && totalActive > 0;
+
+  useEffect(() => {
+    if (gateStuck) {
+      if (!afkTimerRef.current) {
+        afkTimerRef.current = setTimeout(() => setAfkTimeElapsed(true), AFK_GRACE_MS);
+      }
+    } else {
+      if (afkTimerRef.current) {
+        clearTimeout(afkTimerRef.current);
+        afkTimerRef.current = null;
+      }
+      setAfkTimeElapsed(false);
+    }
+  }, [gateStuck]);
+
+  useEffect(() => {
+    return () => {
+      if (afkTimerRef.current) clearTimeout(afkTimerRef.current);
+    };
+  }, []);
 
   async function handleSubmitVotes() {
     setSubmittingVotes(true);
@@ -68,6 +102,45 @@ export default function CurationScreen() {
     }
   }
 
+  async function handleDropInactive() {
+    setSkipping(true);
+    try {
+      await httpsCallable(functions, 'dropInactive')({ code });
+    } catch (e: any) {
+      Alert.alert('Hata', e?.message ?? 'İşlem başarısız.');
+    } finally {
+      setSkipping(false);
+    }
+  }
+
+  // Spectator: read-only view (shows photos and vote progress but no actions)
+  if (isSpectator) {
+    return (
+      <Screen style={styles.screen}>
+        <View style={styles.header}>
+          <Text style={styles.title}>Küratörlük</Text>
+          <Text style={styles.subtitle}>Fotoğrafları oyla — sahipleri gizli</Text>
+          <View style={styles.spectatorBadge}>
+            <Text style={styles.spectatorText}>İzleyici — {activeReadyCount}/{totalActive} oyladı</Text>
+          </View>
+        </View>
+        <FlatList
+          data={photos}
+          keyExtractor={(p) => `${p.ownerUid}/${p.index}`}
+          renderItem={({ item }) => (
+            <CurationCard
+              photo={item}
+              vote={undefined}
+              onVote={() => {}}
+            />
+          )}
+          contentContainerStyle={styles.list}
+          style={styles.listContainer}
+        />
+      </Screen>
+    );
+  }
+
   return (
     <Screen style={styles.screen}>
       <View style={styles.header}>
@@ -76,7 +149,7 @@ export default function CurationScreen() {
           Fotoğrafları oyla — sahipleri gizli
         </Text>
         <Text style={styles.readyCount}>
-          {readyCount}/{totalPlayers} oyuncu oyladı
+          {activeReadyCount}/{totalActive} oyuncu oyladı
         </Text>
       </View>
 
@@ -112,12 +185,22 @@ export default function CurationScreen() {
         )}
 
         {isHost && myReady && !curationDone && (
-          <Button
-            label={allReady ? 'Küratörlüğü Bitir' : `Küratörlüğü Bitir (${readyCount}/${totalPlayers})`}
-            onPress={handleFinalize}
-            loading={finalizing}
-            disabled={finalizing}
-          />
+          <>
+            <Button
+              label={allReady ? 'Küratörlüğü Bitir' : `Küratörlüğü Bitir (${activeReadyCount}/${totalActive})`}
+              onPress={handleFinalize}
+              loading={finalizing}
+              disabled={finalizing}
+            />
+            {afkTimeElapsed && (
+              <Button
+                label="Bekleyenleri Atla"
+                variant="secondary"
+                onPress={handleDropInactive}
+                loading={skipping}
+              />
+            )}
+          </>
         )}
 
         {isHost && curationDone && (
@@ -162,6 +245,19 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '600',
     color: '#007AFF',
+  },
+  spectatorBadge: {
+    backgroundColor: '#F2F2F7',
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    alignSelf: 'flex-start',
+    marginTop: 4,
+  },
+  spectatorText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#8E8E93',
   },
   listContainer: {
     flex: 1,

@@ -12,6 +12,7 @@ export interface RoomMeta {
   createdAt: number;
   expiresAt: number;
   curationDone?: boolean;
+  hostMigratedAt?: number;
 }
 
 export interface Room {

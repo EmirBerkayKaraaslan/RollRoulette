@@ -13,7 +13,8 @@ import { useProfileStore } from '@/src/store/profileStore';
 import { useRoomStore, selectPlayerList, selectIsHost } from '@/src/store/roomStore';
 import { useGameStore } from '@/src/store/gameStore';
 import { useGameRound } from '@/src/hooks/useGameRound';
-import { REVEAL_DISPLAY_MS } from '@/src/services/game/constants';
+import { useHostMigration } from '@/src/hooks/useHostMigration';
+import { REVEAL_DISPLAY_MS, ROUND_DURATION_MS, AFK_GRACE_MS } from '@/src/services/game/constants';
 
 export default function GameScreen() {
   const { code } = useLocalSearchParams<{ code: string }>();
@@ -33,7 +34,9 @@ export default function GameScreen() {
   const revealTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useGameRound(code);
+  useHostMigration(code, uid);
 
+  const isSpectator = uid != null && players[uid]?.isSpectator === true;
   const isPhotoOwner = uid != null && currentRound?.photoOwnerId === uid;
   const revealed = currentRound?.status === 'revealed';
 
@@ -73,13 +76,13 @@ export default function GameScreen() {
     };
   }, [revealed, isHost, code, roundNumber, meta]);
 
-  // Check if all non-owner players guessed → trigger reveal
+  // Check if all non-owner connected players guessed → trigger reveal
   useEffect(() => {
     if (!isHost || !currentRound || revealed) return;
     if (currentRound.status !== 'active') return;
 
     const guessablePlayers = playerList.filter(
-      (p) => p.isConnected && p.uid !== currentRound.photoOwnerId,
+      (p) => p.isConnected && !p.isSpectator && p.uid !== currentRound.photoOwnerId,
     );
     const guessCount = Object.keys(currentRound.guesses ?? {}).length;
     if (guessablePlayers.length > 0 && guessCount >= guessablePlayers.length) {
@@ -87,8 +90,24 @@ export default function GameScreen() {
     }
   }, [currentRound, playerList, isHost, revealed, handleReveal]);
 
+  // Watchdog: if host (original or migrated) sees a stale active round, reveal it
+  useEffect(() => {
+    if (!isHost || !currentRound || currentRound.status !== 'active') return;
+
+    const deadline = currentRound.startedAt + ROUND_DURATION_MS + AFK_GRACE_MS;
+    const now = Date.now();
+
+    if (now >= deadline) {
+      handleReveal();
+      return;
+    }
+
+    const watchdog = setTimeout(() => handleReveal(), deadline - now);
+    return () => clearTimeout(watchdog);
+  }, [isHost, currentRound, handleReveal]);
+
   async function handleGuess(guessedPlayerId: string) {
-    if (!uid || submitting || myGuess || !roundNumber) return;
+    if (!uid || submitting || myGuess || !roundNumber || isSpectator) return;
     setSubmitting(true);
     try {
       await httpsCallable(functions, 'submitGuess')({
@@ -117,6 +136,11 @@ export default function GameScreen() {
         <Text style={styles.roundLabel}>
           Tur {roundNumber}/{meta?.totalRounds ?? '?'}
         </Text>
+        {isSpectator && (
+          <View style={styles.spectatorBadge}>
+            <Text style={styles.spectatorText}>İzliyorsun</Text>
+          </View>
+        )}
       </View>
 
       <CountdownTimer
@@ -136,7 +160,11 @@ export default function GameScreen() {
         )}
       </View>
 
-      {isPhotoOwner ? (
+      {isSpectator ? (
+        <View style={styles.ownerBanner}>
+          <Text style={styles.ownerText}>İzleyici — tahmin gönderemezsin</Text>
+        </View>
+      ) : isPhotoOwner ? (
         <View style={styles.ownerBanner}>
           <Text style={styles.ownerText}>Bu senin fotoğrafın — diğerleri tahmin ediyor</Text>
         </View>
@@ -144,7 +172,7 @@ export default function GameScreen() {
         <ScrollView style={styles.guessList} contentContainerStyle={styles.guessListContent}>
           <Text style={styles.guessLabel}>Kim bu?</Text>
           {playerList
-            .filter((p) => p.uid !== currentRound.photoOwnerId || revealed)
+            .filter((p) => !p.isSpectator && (p.uid !== currentRound.photoOwnerId || revealed))
             .map((p) => (
               <GuessButton
                 key={p.uid}
@@ -175,6 +203,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 16,
     paddingBottom: 4,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
   roundLabel: {
     fontSize: 13,
@@ -182,6 +213,17 @@ const styles = StyleSheet.create({
     color: '#8E8E93',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
+  },
+  spectatorBadge: {
+    backgroundColor: '#F2F2F7',
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+  },
+  spectatorText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#8E8E93',
   },
   photoWrapper: {
     paddingHorizontal: 20,

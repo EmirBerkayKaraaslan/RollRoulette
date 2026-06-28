@@ -1,7 +1,7 @@
 import { httpsCallable } from 'firebase/functions';
 import { update } from 'firebase/database';
 import { useLocalSearchParams } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Alert, FlatList, Image, StyleSheet, Text, View } from 'react-native';
 import { Button } from '@/src/components/ui/Button';
 import { Screen } from '@/src/components/ui/Screen';
@@ -12,12 +12,14 @@ import { functions } from '@/src/services/firebase/config';
 import { useProfileStore } from '@/src/store/profileStore';
 import { useRoomStore, selectPlayerList, selectIsHost } from '@/src/store/roomStore';
 import { useGameStore } from '@/src/store/gameStore';
-import { PHOTOS_PER_PLAYER } from '@/src/services/game/constants';
+import { useHostMigration } from '@/src/hooks/useHostMigration';
+import { PHOTOS_PER_PLAYER, AFK_GRACE_MS } from '@/src/services/game/constants';
 import type { GameMode } from '@/src/types/room';
 
 export default function PhotoSelectScreen() {
   const { code } = useLocalSearchParams<{ code: string }>();
   const uid = useProfileStore((s) => s.uid);
+  const players = useRoomStore((s) => s.players);
   const playerList = useRoomStore(selectPlayerList);
   const isHost = useRoomStore(selectIsHost(uid));
   const mode: GameMode = useRoomStore((s) => s.meta?.mode ?? 'blind');
@@ -27,8 +29,40 @@ export default function PhotoSelectScreen() {
   const [uploading, setUploading] = useState(false);
   const [done, setDone] = useState(false);
   const [starting, setStarting] = useState(false);
+  const [skipping, setSkipping] = useState(false);
+  const [afkTimeElapsed, setAfkTimeElapsed] = useState(false);
+  const afkTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const allReady = playerList.length > 0 && playerList.every((p) => p.photosReady);
+  useHostMigration(code, uid);
+
+  const isSpectator = uid != null && players[uid]?.isSpectator === true;
+
+  // Gate: only connected, non-spectator players matter
+  const connectedActive = playerList.filter((p) => p.isConnected && !p.isSpectator);
+  const allReady = connectedActive.length > 0 && connectedActive.every((p) => p.photosReady);
+
+  // AFK timer: starts when gate is stuck (host has uploaded but others haven't)
+  const gateStuck = isHost && done && !allReady && connectedActive.length > 0;
+
+  useEffect(() => {
+    if (gateStuck) {
+      if (!afkTimerRef.current) {
+        afkTimerRef.current = setTimeout(() => setAfkTimeElapsed(true), AFK_GRACE_MS);
+      }
+    } else {
+      if (afkTimerRef.current) {
+        clearTimeout(afkTimerRef.current);
+        afkTimerRef.current = null;
+      }
+      setAfkTimeElapsed(false);
+    }
+  }, [gateStuck]);
+
+  useEffect(() => {
+    return () => {
+      if (afkTimerRef.current) clearTimeout(afkTimerRef.current);
+    };
+  }, []);
 
   async function handlePick() {
     const uris = await pickGamePhotos();
@@ -58,7 +92,6 @@ export default function PhotoSelectScreen() {
       await uploadPhotoPool(uid, code, selectedUris, (uploaded, total) => {
         setPoolUploadProgress({ uploaded, total });
       });
-      // photosReady = true
       await update(playerRef(code, uid), { photosReady: true });
       setDone(true);
     } catch (e: any) {
@@ -67,6 +100,42 @@ export default function PhotoSelectScreen() {
       setUploading(false);
       setPoolUploadProgress(null);
     }
+  }
+
+  async function handleDropInactive() {
+    setSkipping(true);
+    try {
+      await httpsCallable(functions, 'dropInactive')({ code });
+    } catch (e: any) {
+      Alert.alert('Hata', e?.message ?? 'İşlem başarısız.');
+    } finally {
+      setSkipping(false);
+    }
+  }
+
+  // Spectator: read-only view
+  if (isSpectator) {
+    return (
+      <Screen style={styles.screen}>
+        <Text style={styles.title}>Fotoğraf Seçimi</Text>
+        <View style={styles.spectatorBanner}>
+          <Text style={styles.spectatorTitle}>İzleyici</Text>
+          <Text style={styles.spectatorSubtitle}>
+            Oyuncular fotoğraflarını yükliyor...
+          </Text>
+        </View>
+        <View style={styles.playerStatus}>
+          {connectedActive.map((p) => (
+            <View key={p.uid} style={styles.playerRow}>
+              <Text style={styles.playerName}>{p.nickname}</Text>
+              <Text style={p.photosReady ? styles.ready : styles.waiting}>
+                {p.photosReady ? 'Hazır' : 'Bekleniyor...'}
+              </Text>
+            </View>
+          ))}
+        </View>
+      </Screen>
+    );
   }
 
   return (
@@ -126,15 +195,25 @@ export default function PhotoSelectScreen() {
               <Text style={styles.waitText}>Host turu başlatıyor...</Text>
             )
           ) : (
-            <Text style={styles.waitText}>
-              {playerList.filter((p) => p.photosReady).length}/{playerList.length} oyuncu hazır
-            </Text>
+            <>
+              <Text style={styles.waitText}>
+                {connectedActive.filter((p) => p.photosReady).length}/{connectedActive.length} oyuncu hazır
+              </Text>
+              {isHost && afkTimeElapsed && (
+                <Button
+                  label="Bekleyenleri Atla"
+                  variant="secondary"
+                  onPress={handleDropInactive}
+                  loading={skipping}
+                />
+              )}
+            </>
           )}
         </View>
       )}
 
       <View style={styles.playerStatus}>
-        {playerList.map((p) => (
+        {connectedActive.map((p) => (
           <View key={p.uid} style={styles.playerRow}>
             <Text style={styles.playerName}>{p.nickname}</Text>
             <Text style={p.photosReady ? styles.ready : styles.waiting}>
@@ -160,6 +239,23 @@ const styles = StyleSheet.create({
   subtitle: {
     fontSize: 14,
     color: '#8E8E93',
+  },
+  spectatorBanner: {
+    backgroundColor: '#F2F2F7',
+    borderRadius: 12,
+    padding: 20,
+    alignItems: 'center',
+    gap: 6,
+  },
+  spectatorTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#8E8E93',
+  },
+  spectatorSubtitle: {
+    fontSize: 14,
+    color: '#8E8E93',
+    textAlign: 'center',
   },
   preview: {
     flexGrow: 0,

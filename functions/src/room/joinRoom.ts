@@ -29,8 +29,8 @@ export const joinRoom = onCall(async (request) => {
 
   const meta = metaSnap.val();
 
-  if (meta.status !== 'lobby') {
-    throw new HttpsError('failed-precondition', 'Bu odaya artık katılamazsın; oyun başladı.');
+  if (meta.status === 'ended') {
+    throw new HttpsError('failed-precondition', 'Oyun sona ermiş.');
   }
 
   if (Date.now() > meta.expiresAt) {
@@ -42,9 +42,9 @@ export const joinRoom = onCall(async (request) => {
   const photoUrl: string | null = profile?.photoUrl ?? null;
 
   const playersSnap = await db.ref(`rooms/${code}/players`).get();
-  const players = (playersSnap.val() ?? {}) as Record<string, unknown>;
+  const players = (playersSnap.val() ?? {}) as Record<string, { isSpectator?: boolean }>;
 
-  // İdempotent: zaten üye ise sadece bağlantı güncelle
+  // Idempotent: already a member → refresh connection
   if (players[uid]) {
     await db.ref(`rooms/${code}/players/${uid}`).update({
       isConnected: true,
@@ -53,8 +53,16 @@ export const joinRoom = onCall(async (request) => {
     return { success: true };
   }
 
-  const playerCount = Object.keys(players).length;
-  if (playerCount >= 10) {
+  const isSpectator = meta.status !== 'lobby';
+
+  // Regular players capped at 10; spectators get an extra +10 headroom
+  const regularCount = Object.values(players).filter((p) => !p.isSpectator).length;
+  const spectatorCount = Object.values(players).filter((p) => p.isSpectator).length;
+
+  if (isSpectator && spectatorCount >= 10) {
+    throw new HttpsError('resource-exhausted', 'İzleyici kapasitesi dolu (maks +10).');
+  }
+  if (!isSpectator && regularCount >= 10) {
     throw new HttpsError('resource-exhausted', 'Oda dolu (maks 10 oyuncu).');
   }
 
@@ -65,11 +73,11 @@ export const joinRoom = onCall(async (request) => {
     isHost: false,
     isReady: false,
     isConnected: true,
-    isSpectator: false,
+    isSpectator,
     lastSeen: admin.database.ServerValue.TIMESTAMP,
     totalScore: 0,
     joinedAt: admin.database.ServerValue.TIMESTAMP,
   });
 
-  return { success: true };
+  return { success: true, isSpectator };
 });

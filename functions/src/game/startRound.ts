@@ -49,10 +49,20 @@ export const startRound = onCall(async (request) => {
   const roundRef = db.ref(`rooms/${code}/game/rounds/${roundNumber}`);
 
   // --- Atomik idempotency: transaction ile tur yuvası rezerv et ---
-  // İlk transaction: turu "claimed" olarak rezerve et (var mı kontrol + yaz aynı anda)
+  const CLAIM_TIMEOUT_MS = 8000;
   const claimResult = await roundRef.transaction((existing) => {
-    if (existing !== null) return; // zaten var → abort (idempotent)
-    return { __claimed: true }; // yer tut
+    if (existing === null) return { __claimed: true, claimedAt: Date.now() }; // ilk claim
+
+    // Zombi: sadece claim placeholder var (gerçek tur verisi yok) ve süresi dolmuş
+    const isZombie =
+      existing.__claimed === true &&
+      existing.status === undefined &&
+      typeof existing.claimedAt === 'number' &&
+      Date.now() - existing.claimedAt > CLAIM_TIMEOUT_MS;
+
+    if (isZombie) return { __claimed: true, claimedAt: Date.now() }; // üzerine yeniden claim
+
+    return; // gerçek tur var ya da taze claim → abort (idempotent)
   });
 
   if (!claimResult.committed) {

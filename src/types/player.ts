@@ -6,6 +6,7 @@ export interface Player {
   isReady: boolean;
   isConnected: boolean;
   isSpectator: boolean;
+  isAfk?: boolean;
   lastSeen: number;
   totalScore: number;
   joinedAt: number;

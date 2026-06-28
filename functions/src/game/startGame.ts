@@ -30,11 +30,18 @@ export const startGame = onCall(async (request) => {
     throw new HttpsError('failed-precondition', 'Oyun lobide değil.');
   }
 
-  const players = (playersSnap.val() ?? {}) as Record<string, unknown>;
-  const playerCount = Object.keys(players).length;
+  const players = (playersSnap.val() ?? {}) as Record<
+    string,
+    { isConnected?: boolean; isSpectator?: boolean }
+  >;
 
-  if (playerCount < MIN_PLAYERS) {
-    throw new HttpsError('failed-precondition', `En az ${MIN_PLAYERS} oyuncu gerekli.`);
+  // Only count connected, non-spectator players
+  const connectedCount = Object.values(players).filter(
+    (p) => p.isConnected !== false && !p.isSpectator,
+  ).length;
+
+  if (connectedCount < MIN_PLAYERS) {
+    throw new HttpsError('failed-precondition', `En az ${MIN_PLAYERS} bağlı oyuncu gerekli.`);
   }
 
   await db.ref(`rooms/${code}/meta/status`).set('photo_select');

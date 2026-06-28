@@ -22,6 +22,7 @@ export const photoPoolPlayerRef = (code: string, uid: string) =>
   ref(db, `rooms/${code}/game/photoPool/${uid}`);
 export const roundRef = (code: string, n: number) => ref(db, `rooms/${code}/game/rounds/${n}`);
 export const serverTimeOffsetRef = () => ref(db, '.info/serverTimeOffset');
+export const connectedRef = () => ref(db, '.info/connected');
 
 // Curation refs
 export const curationVotesRef = (code: string) =>

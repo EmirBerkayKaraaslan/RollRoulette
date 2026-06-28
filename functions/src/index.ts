@@ -11,3 +11,5 @@ export { startCuration } from './game/startCuration';
 export { finalizeCuration } from './game/finalizeCuration';
 export { submitGuess } from './game/submitGuess';
 export { revealRound } from './game/revealRound';
+export { migrateHost } from './game/migrateHost';
+export { dropInactive } from './game/dropInactive';

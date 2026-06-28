@@ -26,9 +26,14 @@ export const startCuration = onCall(async (request) => {
 
   const playersSnap = await db.ref(`rooms/${code}/players`).get();
   if (!playersSnap.exists()) throw new HttpsError('not-found', 'Oyuncular bulunamadı.');
-  const players = playersSnap.val() as Record<string, { photosReady?: boolean; isConnected?: boolean }>;
+  const players = playersSnap.val() as Record<
+    string,
+    { photosReady?: boolean; isConnected?: boolean; isSpectator?: boolean }
+  >;
 
-  const connectedPlayers = Object.values(players).filter((p) => p.isConnected !== false);
+  const connectedPlayers = Object.values(players).filter(
+    (p) => p.isConnected !== false && !p.isSpectator,
+  );
   const allReady = connectedPlayers.every((p) => p.photosReady === true);
   if (!allReady) {
     throw new HttpsError('failed-precondition', 'Tüm oyuncular fotoğraflarını yüklemedi.');
