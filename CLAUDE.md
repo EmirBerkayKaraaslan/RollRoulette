@@ -154,7 +154,7 @@ score = max(0, 10.000 - (submittedAt - startedAt) / 1000)
 
 | Faz | Kapsam | Durum |
 |---|---|---|
-| 1 | Auth, Profil, Lobi, Chat | Başlamadı |
+| 1 | Auth, Profil, Lobi, Chat | PRD hazır → `docs/prd/FAZ-1.md` |
 | 2 | Oyun Motoru: Blind Mod, Timer, Puanlama | Başlamadı |
 | 3 | Curated Mod + Animasyonlar | Başlamadı |
 | 4 | Dayanıklılık: Disconnect, AFK, Host migrasyon | Başlamadı |
