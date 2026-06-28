@@ -1,5 +1,7 @@
 import { StyleSheet, Text, View, FlatList } from 'react-native';
 import { Avatar } from '@/src/components/ui/Avatar';
+import { AnimatedNumber } from '@/src/components/ui/AnimatedNumber';
+import { ANIM_SCORE_MS } from '@/src/services/game/constants';
 import type { Player } from '@/src/types/player';
 
 interface Props {
@@ -21,7 +23,7 @@ export function Leaderboard({ players }: Props) {
           <Text style={styles.name} numberOfLines={1}>
             {item.nickname}
           </Text>
-          <Text style={styles.score}>{item.totalScore}</Text>
+          <AnimatedNumber value={item.totalScore} duration={ANIM_SCORE_MS} style={styles.score} />
         </View>
       )}
     />

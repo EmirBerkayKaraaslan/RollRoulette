@@ -1,5 +1,15 @@
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useEffect } from 'react';
+import { StyleSheet, Text } from 'react-native';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withSpring,
+  withTiming,
+  interpolateColor,
+} from 'react-native-reanimated';
+import { Pressable } from 'react-native';
 import { Avatar } from '@/src/components/ui/Avatar';
+import { springConfig } from '@/src/utils/animations';
 import type { Player } from '@/src/types/player';
 import type { Guess } from '@/src/types/game';
 
@@ -14,28 +24,60 @@ interface Props {
 
 export function GuessButton({ player, onPress, locked, myGuess, revealed, isPhotoOwner }: Props) {
   const isSelected = myGuess?.guessedPlayerId === player.uid;
+  const scale = useSharedValue(1);
+  // 0 = default, 1 = selected, 2 = correct, 3 = wrong, 4 = owner
+  const colorState = useSharedValue(0);
 
-  let borderColor = '#E5E5EA';
-  if (revealed && isPhotoOwner) borderColor = '#34C759';
-  else if (revealed && isSelected) borderColor = myGuess?.isCorrect ? '#34C759' : '#FF3B30';
-  else if (isSelected) borderColor = '#007AFF';
+  useEffect(() => {
+    if (revealed && isPhotoOwner) {
+      colorState.value = withTiming(4, { duration: 300 });
+    } else if (revealed && isSelected) {
+      colorState.value = withTiming(myGuess?.isCorrect ? 2 : 3, { duration: 300 });
+    } else if (isSelected) {
+      colorState.value = withTiming(1, { duration: 200 });
+    } else {
+      colorState.value = withTiming(0, { duration: 200 });
+    }
+  }, [revealed, isPhotoOwner, isSelected, myGuess, colorState]);
+
+  const animStyle = useAnimatedStyle(() => {
+    const borderColor = interpolateColor(
+      colorState.value,
+      [0, 1, 2, 3, 4],
+      ['#E5E5EA', '#007AFF', '#34C759', '#FF3B30', '#34C759'],
+    );
+    return {
+      transform: [{ scale: scale.value }],
+      borderColor,
+    };
+  });
+
+  function handlePressIn() {
+    if (!locked) scale.value = withSpring(0.96, springConfig);
+  }
+
+  function handlePressOut() {
+    scale.value = withSpring(1, springConfig);
+  }
 
   return (
-    <TouchableOpacity
-      style={[styles.button, { borderColor }]}
+    <Pressable
       onPress={onPress}
+      onPressIn={handlePressIn}
+      onPressOut={handlePressOut}
       disabled={locked}
-      activeOpacity={0.7}
     >
-      <Avatar uri={player.photoUrl} size={36} />
-      <Text style={styles.nickname} numberOfLines={1}>
-        {player.nickname}
-      </Text>
-      {revealed && isPhotoOwner && <Text style={styles.badge}>📸</Text>}
-      {revealed && isSelected && !isPhotoOwner && (
-        <Text style={styles.badge}>{myGuess?.isCorrect ? '✓' : '✗'}</Text>
-      )}
-    </TouchableOpacity>
+      <Animated.View style={[styles.button, animStyle]}>
+        <Avatar uri={player.photoUrl} size={36} />
+        <Text style={styles.nickname} numberOfLines={1}>
+          {player.nickname}
+        </Text>
+        {revealed && isPhotoOwner && <Text style={styles.badge}>📸</Text>}
+        {revealed && isSelected && !isPhotoOwner && (
+          <Text style={styles.badge}>{myGuess?.isCorrect ? '✓' : '✗'}</Text>
+        )}
+      </Animated.View>
+    </Pressable>
   );
 }
 

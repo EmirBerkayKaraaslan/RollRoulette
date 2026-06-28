@@ -23,6 +23,16 @@ export const photoPoolPlayerRef = (code: string, uid: string) =>
 export const roundRef = (code: string, n: number) => ref(db, `rooms/${code}/game/rounds/${n}`);
 export const serverTimeOffsetRef = () => ref(db, '.info/serverTimeOffset');
 
+// Curation refs
+export const curationVotesRef = (code: string) =>
+  ref(db, `rooms/${code}/game/curation/votes`);
+export const curationVoteRef = (code: string, ownerUid: string, index: string, voterUid: string) =>
+  ref(db, `rooms/${code}/game/curation/votes/${ownerUid}/${index}/${voterUid}`);
+export const curationReadyRef = (code: string) =>
+  ref(db, `rooms/${code}/game/curation/ready`);
+export const curationReadyPlayerRef = (code: string, uid: string) =>
+  ref(db, `rooms/${code}/game/curation/ready/${uid}`);
+
 export function subscribeValue<T>(
   path: ReturnType<typeof ref>,
   cb: (val: T | null) => void,

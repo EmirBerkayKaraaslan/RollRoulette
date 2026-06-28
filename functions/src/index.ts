@@ -7,5 +7,7 @@ export { joinRoom } from './room/joinRoom';
 export { cleanupExpiredRooms } from './room/cleanupExpiredRooms';
 export { startGame } from './game/startGame';
 export { startRound } from './game/startRound';
+export { startCuration } from './game/startCuration';
+export { finalizeCuration } from './game/finalizeCuration';
 export { submitGuess } from './game/submitGuess';
 export { revealRound } from './game/revealRound';

@@ -8,6 +8,7 @@ import { Button } from '@/src/components/ui/Button';
 import { Screen } from '@/src/components/ui/Screen';
 import { useProfileStore } from '@/src/store/profileStore';
 import { useRoomStore } from '@/src/store/roomStore';
+import type { GameMode } from '@/src/types/room';
 
 export default function HomeScreen() {
   const nickname = useProfileStore((s) => s.nickname);
@@ -16,13 +17,14 @@ export default function HomeScreen() {
   const setRoom = useRoomStore((s) => s.setRoom);
 
   const [creating, setCreating] = useState(false);
+  const [selectedMode, setSelectedMode] = useState<GameMode>('blind');
 
   async function handleCreateRoom() {
     if (!uid) return;
     setCreating(true);
     try {
-      const createRoom = httpsCallable<{ mode: 'blind' }, { code: string }>(functions, 'createRoom');
-      const result = await createRoom({ mode: 'blind' });
+      const createRoom = httpsCallable<{ mode: GameMode }, { code: string }>(functions, 'createRoom');
+      const result = await createRoom({ mode: selectedMode });
       const { code } = result.data;
       setRoom(code, 'host');
       router.push(`/room/${code}/lobby`);
@@ -48,6 +50,33 @@ export default function HomeScreen() {
       <View style={styles.heroSection}>
         <Text style={styles.heroTitle}>RollRoulette</Text>
         <Text style={styles.heroSub}>Kim kimin fotoğrafı?</Text>
+      </View>
+
+      <View style={styles.modePicker}>
+        <Text style={styles.modeLabel}>Oyun Modu</Text>
+        <View style={styles.modeToggle}>
+          <TouchableOpacity
+            style={[styles.modeOption, selectedMode === 'blind' && styles.modeOptionActive]}
+            onPress={() => setSelectedMode('blind')}
+          >
+            <Text style={[styles.modeOptionText, selectedMode === 'blind' && styles.modeOptionTextActive]}>
+              Blind
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.modeOption, selectedMode === 'curated' && styles.modeOptionActive]}
+            onPress={() => setSelectedMode('curated')}
+          >
+            <Text style={[styles.modeOptionText, selectedMode === 'curated' && styles.modeOptionTextActive]}>
+              Curated
+            </Text>
+          </TouchableOpacity>
+        </View>
+        <Text style={styles.modeDesc}>
+          {selectedMode === 'blind'
+            ? 'Tüm fotoğraflar direkt turda kullanılır.'
+            : 'Oyuncular havuzu oylar; onaylananlar turda yer alır.'}
+        </Text>
       </View>
 
       <View style={styles.actions}>
@@ -96,6 +125,48 @@ const styles = StyleSheet.create({
   },
   heroSub: {
     fontSize: 18,
+    color: '#8E8E93',
+  },
+  modePicker: {
+    gap: 8,
+  },
+  modeLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#8E8E93',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  modeToggle: {
+    flexDirection: 'row',
+    backgroundColor: '#F2F2F7',
+    borderRadius: 10,
+    padding: 3,
+  },
+  modeOption: {
+    flex: 1,
+    paddingVertical: 8,
+    alignItems: 'center',
+    borderRadius: 8,
+  },
+  modeOptionActive: {
+    backgroundColor: '#fff',
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 1 },
+    elevation: 2,
+  },
+  modeOptionText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#8E8E93',
+  },
+  modeOptionTextActive: {
+    color: '#007AFF',
+  },
+  modeDesc: {
+    fontSize: 12,
     color: '#8E8E93',
   },
   actions: {

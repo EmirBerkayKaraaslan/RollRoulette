@@ -17,6 +17,11 @@ export const createRoom = onCall(async (request) => {
   if (!request.auth) throw new HttpsError('unauthenticated', 'Giriş gerekli.');
 
   const uid = request.auth.uid;
+  const { mode = 'blind' } = (request.data ?? {}) as { mode?: 'blind' | 'curated' };
+  if (mode !== 'blind' && mode !== 'curated') {
+    throw new HttpsError('invalid-argument', 'Geçersiz mod.');
+  }
+
   const db = admin.database();
   const firestore = admin.firestore();
 
@@ -40,7 +45,7 @@ export const createRoom = onCall(async (request) => {
       return {
         hostId: uid,
         status: 'lobby',
-        mode: 'blind',
+        mode,
         totalRounds: 0,
         currentRound: 0,
         createdAt: admin.database.ServerValue.TIMESTAMP,

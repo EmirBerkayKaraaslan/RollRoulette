@@ -34,6 +34,9 @@ export default function RoomLayout() {
     if (meta.status === 'photo_select') {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       router.replace({ pathname: '/room/[code]/photo-select' as any, params: { code } });
+    } else if (meta.status === 'curation') {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      router.replace({ pathname: '/room/[code]/curation' as any, params: { code } });
     } else if (meta.status === 'playing') {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       router.replace({ pathname: '/room/[code]/game' as any, params: { code } });
@@ -47,6 +50,7 @@ export default function RoomLayout() {
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Screen name="lobby" />
       <Stack.Screen name="photo-select" />
+      <Stack.Screen name="curation" />
       <Stack.Screen name="game" />
       <Stack.Screen name="results" />
     </Stack>

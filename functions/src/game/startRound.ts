@@ -23,8 +23,15 @@ export const startRound = onCall(async (request) => {
   }
 
   if (roundNumber === 1) {
-    if (meta.status !== 'photo_select') {
-      throw new HttpsError('failed-precondition', 'Henüz foto seçim aşamasında değil.');
+    const mode: string = meta.mode ?? 'blind';
+    if (mode === 'curated') {
+      if (meta.status !== 'curation' || !meta.curationDone) {
+        throw new HttpsError('failed-precondition', 'Küratörlük tamamlanmadı.');
+      }
+    } else {
+      if (meta.status !== 'photo_select') {
+        throw new HttpsError('failed-precondition', 'Henüz foto seçim aşamasında değil.');
+      }
     }
   } else {
     if (meta.status !== 'playing') {
@@ -61,12 +68,14 @@ export const startRound = onCall(async (request) => {
     return { success: true, ended: true };
   }
 
-  const pool = poolSnap.val() as Record<string, Record<string, { url: string; used: boolean }>>;
+  const pool = poolSnap.val() as Record<string, Record<string, { url: string; used: boolean; approved?: boolean }>>;
+  const isCurated = (meta.mode ?? 'blind') === 'curated';
 
   const available: Array<{ ownerUid: string; index: string; url: string }> = [];
   for (const [ownerUid, photos] of Object.entries(pool)) {
     for (const [idx, photo] of Object.entries(photos)) {
-      if (!photo.used) {
+      const eligible = !photo.used && (!isCurated || photo.approved === true);
+      if (eligible) {
         available.push({ ownerUid, index: idx, url: photo.url });
       }
     }
@@ -78,14 +87,10 @@ export const startRound = onCall(async (request) => {
     return { success: true, ended: true };
   }
 
-  // İlk turda totalRounds hesapla
+  // İlk turda totalRounds hesapla (mod farkındalıklı)
   let totalRounds = meta.totalRounds;
   if (roundNumber === 1) {
-    let totalPhotos = 0;
-    for (const photos of Object.values(pool)) {
-      totalPhotos += Object.keys(photos).length;
-    }
-    totalRounds = Math.min(totalPhotos, MAX_ROUNDS);
+    totalRounds = Math.min(available.length, MAX_ROUNDS);
   }
 
   if (roundNumber > totalRounds) {

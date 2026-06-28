@@ -1,6 +1,6 @@
 import type { Player } from './player';
 
-export type RoomStatus = 'lobby' | 'photo_select' | 'playing' | 'ended';
+export type RoomStatus = 'lobby' | 'photo_select' | 'curation' | 'playing' | 'ended';
 export type GameMode = 'blind' | 'curated';
 
 export interface RoomMeta {
@@ -11,6 +11,7 @@ export interface RoomMeta {
   currentRound: number;
   createdAt: number;
   expiresAt: number;
+  curationDone?: boolean;
 }
 
 export interface Room {

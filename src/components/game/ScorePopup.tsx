@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { StyleSheet, Text } from 'react-native';
+import { StyleSheet } from 'react-native';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -8,6 +8,8 @@ import Animated, {
   withSpring,
   runOnJS,
 } from 'react-native-reanimated';
+import { AnimatedNumber } from '@/src/components/ui/AnimatedNumber';
+import { ANIM_SCORE_MS } from '@/src/services/game/constants';
 
 interface Props {
   score: number;
@@ -21,16 +23,17 @@ export function ScorePopup({ score, onDone }: Props) {
   useEffect(() => {
     opacity.value = withSequence(
       withTiming(1, { duration: 200 }),
-      withTiming(1, { duration: 1200 }),
+      withTiming(1, { duration: ANIM_SCORE_MS }),
       withTiming(0, { duration: 400 }, (finished) => {
         if (finished && onDone) runOnJS(onDone)();
       }),
     );
     translateY.value = withSequence(
       withSpring(-20, { damping: 8 }),
-      withTiming(-40, { duration: 1200 }),
+      withTiming(-40, { duration: ANIM_SCORE_MS }),
       withTiming(-60, { duration: 400 }),
     );
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [score]);
 
   const style = useAnimatedStyle(() => ({
@@ -42,7 +45,7 @@ export function ScorePopup({ score, onDone }: Props) {
 
   return (
     <Animated.View style={[styles.container, style]}>
-      <Text style={styles.text}>+{score}</Text>
+      <AnimatedNumber value={score} duration={ANIM_SCORE_MS} style={styles.text} prefix="+" />
     </Animated.View>
   );
 }
@@ -61,5 +64,5 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 22,
     fontWeight: '800',
-  },
+  } as const,
 });

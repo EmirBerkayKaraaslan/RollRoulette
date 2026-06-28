@@ -13,13 +13,14 @@ import { useProfileStore } from '@/src/store/profileStore';
 import { useRoomStore, selectPlayerList, selectIsHost } from '@/src/store/roomStore';
 import { useGameStore } from '@/src/store/gameStore';
 import { PHOTOS_PER_PLAYER } from '@/src/services/game/constants';
+import type { GameMode } from '@/src/types/room';
 
 export default function PhotoSelectScreen() {
   const { code } = useLocalSearchParams<{ code: string }>();
   const uid = useProfileStore((s) => s.uid);
-  const players = useRoomStore((s) => s.players);
   const playerList = useRoomStore(selectPlayerList);
   const isHost = useRoomStore(selectIsHost(uid));
+  const mode: GameMode = useRoomStore((s) => s.meta?.mode ?? 'blind');
   const setPoolUploadProgress = useGameStore((s) => s.setPoolUploadProgress);
 
   const [selectedUris, setSelectedUris] = useState<string[]>([]);
@@ -27,7 +28,6 @@ export default function PhotoSelectScreen() {
   const [done, setDone] = useState(false);
   const [starting, setStarting] = useState(false);
 
-  const myPlayer = uid ? players[uid] : null;
   const allReady = playerList.length > 0 && playerList.every((p) => p.photosReady);
 
   async function handlePick() {
@@ -36,12 +36,16 @@ export default function PhotoSelectScreen() {
     setSelectedUris(uris);
   }
 
-  async function handleStartRound() {
+  async function handleHostAction() {
     setStarting(true);
     try {
-      await httpsCallable(functions, 'startRound')({ code, roundNumber: 1 });
+      if (mode === 'curated') {
+        await httpsCallable(functions, 'startCuration')({ code });
+      } else {
+        await httpsCallable(functions, 'startRound')({ code, roundNumber: 1 });
+      }
     } catch (e: any) {
-      Alert.alert('Hata', e?.message ?? 'Tur başlatılamadı.');
+      Alert.alert('Hata', e?.message ?? 'İşlem başarısız.');
     } finally {
       setStarting(false);
     }
@@ -114,8 +118,8 @@ export default function PhotoSelectScreen() {
           {allReady ? (
             isHost ? (
               <Button
-                label="Turu Başlat"
-                onPress={handleStartRound}
+                label={mode === 'curated' ? 'Küratörlüğe Geç' : 'Turu Başlat'}
+                onPress={handleHostAction}
                 loading={starting}
               />
             ) : (

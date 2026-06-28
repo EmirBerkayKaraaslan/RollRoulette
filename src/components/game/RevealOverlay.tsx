@@ -1,5 +1,14 @@
-import { StyleSheet, Text, View, ScrollView } from 'react-native';
+import { useEffect } from 'react';
+import { StyleSheet, Text, ScrollView } from 'react-native';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withSpring,
+  withTiming,
+} from 'react-native-reanimated';
 import { Avatar } from '@/src/components/ui/Avatar';
+import { ANIM_REVEAL_MS } from '@/src/services/game/constants';
+import { revealSpring } from '@/src/utils/animations';
 import type { Player } from '@/src/types/player';
 import type { Round } from '@/src/types/game';
 
@@ -10,21 +19,35 @@ interface Props {
 
 export function RevealOverlay({ round, players }: Props) {
   const owner = players[round.photoOwnerId];
+  const opacity = useSharedValue(0);
+  const translateY = useSharedValue(24);
+  const scale = useSharedValue(0.92);
+
+  useEffect(() => {
+    opacity.value = withTiming(1, { duration: ANIM_REVEAL_MS });
+    translateY.value = withSpring(0, revealSpring);
+    scale.value = withSpring(1, revealSpring);
+  }, [opacity, translateY, scale]);
+
+  const animStyle = useAnimatedStyle(() => ({
+    opacity: opacity.value,
+    transform: [{ translateY: translateY.value }, { scale: scale.value }],
+  }));
 
   return (
-    <View style={styles.container}>
-      <View style={styles.ownerRow}>
+    <Animated.View style={[styles.container, animStyle]}>
+      <Animated.View style={styles.ownerRow}>
         <Text style={styles.label}>Bu fotoğraf</Text>
         <Avatar uri={owner?.photoUrl ?? null} size={48} />
         <Text style={styles.ownerName}>{owner?.nickname ?? '?'}</Text>
         <Text style={styles.label}>kişiye aitti</Text>
-      </View>
+      </Animated.View>
 
       <ScrollView style={styles.guessList}>
         {Object.entries(round.guesses ?? {}).map(([uid, guess]) => {
           const guesser = players[uid];
           return (
-            <View key={uid} style={styles.guessRow}>
+            <Animated.View key={uid} style={styles.guessRow}>
               <Avatar uri={guesser?.photoUrl ?? null} size={28} />
               <Text style={styles.guesserName} numberOfLines={1}>
                 {guesser?.nickname ?? uid}
@@ -32,11 +55,11 @@ export function RevealOverlay({ round, players }: Props) {
               <Text style={[styles.guessResult, { color: guess.isCorrect ? '#34C759' : '#FF3B30' }]}>
                 {guess.isCorrect ? `+${guess.score}` : '0'}
               </Text>
-            </View>
+            </Animated.View>
           );
         })}
       </ScrollView>
-    </View>
+    </Animated.View>
   );
 }
 

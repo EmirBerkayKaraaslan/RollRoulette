@@ -1,7 +1,13 @@
 import { useEffect, useRef } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
-import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
-import { ROUND_DURATION_MS } from '@/src/services/game/constants';
+import { StyleSheet, View } from 'react-native';
+import Animated, {
+  useAnimatedStyle,
+  useSharedValue,
+  withRepeat,
+  withSequence,
+  withTiming,
+} from 'react-native-reanimated';
+import { ROUND_DURATION_MS, TIMER_WARN_RATIO, ANIM_TIMER_PULSE_MS } from '@/src/services/game/constants';
 import { useServerTime } from '@/src/hooks/useServerTime';
 
 interface Props {
@@ -12,20 +18,35 @@ interface Props {
 export function CountdownTimer({ startedAt, onExpire }: Props) {
   const { serverNow } = useServerTime();
   const progress = useSharedValue(1);
-  const secondsLeft = useRef(Math.ceil(ROUND_DURATION_MS / 1000));
+  const pulseScale = useSharedValue(1);
   const expired = useRef(false);
+  const warningTriggered = useRef(false);
 
   useEffect(() => {
     expired.current = false;
+    warningTriggered.current = false;
 
     const tick = () => {
       const elapsed = serverNow() - startedAt;
       const remaining = Math.max(0, ROUND_DURATION_MS - elapsed);
-      secondsLeft.current = Math.ceil(remaining / 1000);
-      progress.value = withTiming(remaining / ROUND_DURATION_MS, { duration: 250 });
+      const ratio = remaining / ROUND_DURATION_MS;
+      progress.value = withTiming(ratio, { duration: 250 });
+
+      if (ratio < TIMER_WARN_RATIO && !warningTriggered.current) {
+        warningTriggered.current = true;
+        pulseScale.value = withRepeat(
+          withSequence(
+            withTiming(1.04, { duration: ANIM_TIMER_PULSE_MS / 2 }),
+            withTiming(1, { duration: ANIM_TIMER_PULSE_MS / 2 }),
+          ),
+          -1,
+          false,
+        );
+      }
 
       if (remaining <= 0 && !expired.current) {
         expired.current = true;
+        pulseScale.value = withTiming(1);
         onExpire();
       }
     };
@@ -33,19 +54,24 @@ export function CountdownTimer({ startedAt, onExpire }: Props) {
     tick();
     const id = setInterval(tick, 250);
     return () => clearInterval(id);
-  }, [startedAt, onExpire, serverNow, progress]);
+  }, [startedAt, onExpire, serverNow, progress, pulseScale]);
 
   const barStyle = useAnimatedStyle(() => ({
     width: `${progress.value * 100}%`,
-    backgroundColor: progress.value > 0.4 ? '#34C759' : progress.value > 0.2 ? '#FF9500' : '#FF3B30',
+    backgroundColor:
+      progress.value > 0.4 ? '#34C759' : progress.value > TIMER_WARN_RATIO ? '#FF9500' : '#FF3B30',
+  }));
+
+  const containerStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: pulseScale.value }],
   }));
 
   return (
-    <View style={styles.container}>
+    <Animated.View style={[styles.container, containerStyle]}>
       <View style={styles.track}>
         <Animated.View style={[styles.bar, barStyle]} />
       </View>
-    </View>
+    </Animated.View>
   );
 }
 

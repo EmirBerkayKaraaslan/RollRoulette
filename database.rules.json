@@ -36,7 +36,29 @@
                 ".validate": "newData.hasChildren(['url','used']) && newData.child('url').isString() && newData.child('used').isBoolean()",
                 "used": {
                   ".validate": "newData.val() === false"
+                },
+                "approved": {
+                  ".validate": "!newData.exists() || newData.val() === data.val()"
                 }
+              }
+            }
+          },
+          "curation": {
+            ".read": "auth != null && root.child('rooms/' + $code + '/players/' + auth.uid).exists()",
+            "votes": {
+              "$ownerUid": {
+                "$index": {
+                  "$voterUid": {
+                    ".write": "auth != null && auth.uid === $voterUid && $voterUid !== $ownerUid && root.child('rooms/' + $code + '/players/' + auth.uid).exists()",
+                    ".validate": "newData.isBoolean()"
+                  }
+                }
+              }
+            },
+            "ready": {
+              "$uid": {
+                ".write": "auth != null && auth.uid === $uid && root.child('rooms/' + $code + '/players/' + auth.uid).exists()",
+                ".validate": "newData.isBoolean()"
               }
             }
           },
