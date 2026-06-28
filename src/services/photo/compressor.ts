@@ -1,4 +1,5 @@
-import * as FileSystem from 'expo-file-system';
+// SDK 54: getInfoAsync ana modülden kaldırıldı (deprecation → throw); legacy API'den al.
+import * as FileSystem from 'expo-file-system/legacy';
 import * as ImageManipulator from 'expo-image-manipulator';
 
 const MAX_BYTES = 200 * 1024;
