@@ -156,6 +156,6 @@ score = max(0, 10.000 - (submittedAt - startedAt) / 1000)
 |---|---|---|
 | 1 | Auth, Profil, Lobi, Chat | ✅ TAMAMLANDI — Z1/Z2/T1/R1-R3 + FN1 build düzeltildi, app+functions tsc temiz |
 | 2 | Oyun Motoru: Blind Mod, Timer, Puanlama | ✅ TAMAMLANDI — B1/S1/L1/L3/L4 düzeltildi, app+functions tsc temiz |
-| 3 | Curated Mod (Grup Küratörlüğü) + Animasyonlar | PRD hazır → `docs/prd/FAZ-3.md` |
+| 3 | Curated Mod (Grup Küratörlüğü) + Animasyonlar | ✅ TAMAMLANDI — ilk turda temiz, app+functions tsc temiz |
 | 4 | Dayanıklılık: Disconnect, AFK, Host migrasyon | Başlamadı |
 | 5 | Cilalama + App Store Deploy | Başlamadı |
