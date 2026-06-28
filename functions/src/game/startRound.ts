@@ -1,5 +1,6 @@
 import * as admin from 'firebase-admin';
 import { HttpsError, onCall } from 'firebase-functions/v2/https';
+import { ServerValue } from 'firebase-admin/database';
 
 const MAX_ROUNDS = 15;
 
@@ -129,7 +130,7 @@ export const startRound = onCall(async (request) => {
   await roundRef.set({
     photoUrl: chosen.url,
     photoOwnerId: chosen.ownerUid,
-    startedAt: admin.database.ServerValue.TIMESTAMP,
+    startedAt: ServerValue.TIMESTAMP,
     revealedAt: null,
     status: 'active',
     guesses: null,

@@ -1,5 +1,6 @@
 import * as admin from 'firebase-admin';
 import { HttpsError, onCall } from 'firebase-functions/v2/https';
+import { ServerValue } from 'firebase-admin/database';
 
 interface JoinRoomData {
   code: string;
@@ -48,7 +49,7 @@ export const joinRoom = onCall(async (request) => {
   if (players[uid]) {
     await db.ref(`rooms/${code}/players/${uid}`).update({
       isConnected: true,
-      lastSeen: admin.database.ServerValue.TIMESTAMP,
+      lastSeen: ServerValue.TIMESTAMP,
     });
     return { success: true };
   }
@@ -74,9 +75,9 @@ export const joinRoom = onCall(async (request) => {
     isReady: false,
     isConnected: true,
     isSpectator,
-    lastSeen: admin.database.ServerValue.TIMESTAMP,
+    lastSeen: ServerValue.TIMESTAMP,
     totalScore: 0,
-    joinedAt: admin.database.ServerValue.TIMESTAMP,
+    joinedAt: ServerValue.TIMESTAMP,
   });
 
   return { success: true, isSpectator };

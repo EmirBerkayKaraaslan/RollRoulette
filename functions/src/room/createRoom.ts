@@ -1,5 +1,6 @@
 import * as admin from 'firebase-admin';
 import { HttpsError, onCall } from 'firebase-functions/v2/https';
+import { ServerValue } from 'firebase-admin/database';
 
 const ROOM_TTL_MS = 4 * 60 * 60 * 1000; // 4 saat
 const MAX_ATTEMPTS = 10;
@@ -48,7 +49,7 @@ export const createRoom = onCall(async (request) => {
         mode,
         totalRounds: 0,
         currentRound: 0,
-        createdAt: admin.database.ServerValue.TIMESTAMP,
+        createdAt: ServerValue.TIMESTAMP,
         expiresAt,
       };
     });
@@ -71,9 +72,9 @@ export const createRoom = onCall(async (request) => {
     isReady: false,
     isConnected: true,
     isSpectator: false,
-    lastSeen: admin.database.ServerValue.TIMESTAMP,
+    lastSeen: ServerValue.TIMESTAMP,
     totalScore: 0,
-    joinedAt: admin.database.ServerValue.TIMESTAMP,
+    joinedAt: ServerValue.TIMESTAMP,
   });
 
   return { code };

@@ -1,5 +1,6 @@
 import * as admin from 'firebase-admin';
 import { HttpsError, onCall } from 'firebase-functions/v2/https';
+import { ServerValue } from 'firebase-admin/database';
 
 export const revealRound = onCall(async (request) => {
   if (!request.auth) throw new HttpsError('unauthenticated', 'Giriş gerekli.');
@@ -29,7 +30,7 @@ export const revealRound = onCall(async (request) => {
     return {
       ...round,
       status: 'revealed',
-      revealedAt: admin.database.ServerValue.TIMESTAMP,
+      revealedAt: ServerValue.TIMESTAMP,
     };
   });
 

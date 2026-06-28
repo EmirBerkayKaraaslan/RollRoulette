@@ -1,5 +1,6 @@
 import * as admin from 'firebase-admin';
 import { HttpsError, onCall } from 'firebase-functions/v2/https';
+import { FieldValue } from 'firebase-admin/firestore';
 
 type ReportReason = 'inappropriate' | 'spam' | 'other';
 
@@ -47,7 +48,7 @@ export const reportContent = onCall(async (request) => {
     photoOwnerId,
     reason,
     status: 'pending',
-    ts: admin.firestore.FieldValue.serverTimestamp(),
+    ts: FieldValue.serverTimestamp(),
   });
 
   return { success: true };

@@ -1,5 +1,6 @@
 import * as admin from 'firebase-admin';
 import { HttpsError, onCall } from 'firebase-functions/v2/https';
+import { ServerValue } from 'firebase-admin/database';
 
 interface PlayerSnap {
   isConnected: boolean;
@@ -60,7 +61,7 @@ export const migrateHost = onCall(async (request) => {
   await db.ref().update({
     [`rooms/${code}/players/${oldHostUid}/isHost`]: false,
     [`rooms/${code}/players/${newHostUid}/isHost`]: true,
-    [`rooms/${code}/meta/hostMigratedAt`]: admin.database.ServerValue.TIMESTAMP,
+    [`rooms/${code}/meta/hostMigratedAt`]: ServerValue.TIMESTAMP,
   });
 
   return { success: true, migrated: true, newHostUid };

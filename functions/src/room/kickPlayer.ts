@@ -1,5 +1,6 @@
 import * as admin from 'firebase-admin';
 import { HttpsError, onCall } from 'firebase-functions/v2/https';
+import { ServerValue } from 'firebase-admin/database';
 
 interface KickPlayerData {
   code: string;
@@ -46,7 +47,7 @@ export const kickPlayer = onCall(async (request) => {
     await db.ref(`rooms/${code}/players/${targetUid}`).update({
       isSpectator: true,
       isConnected: false,
-      lastSeen: admin.database.ServerValue.TIMESTAMP,
+      lastSeen: ServerValue.TIMESTAMP,
     });
   }
 
